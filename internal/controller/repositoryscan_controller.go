@@ -1084,7 +1084,9 @@ func (r *RepositoryScanReconciler) refreshScanRunStatus(
 			s.Status.Phase = repositoryScanPhaseReady
 			s.Status.LastProcessedCommit = run.HeadCommit
 			if run.CompletedAt != nil {
-				s.Status.LastSuccessfulScanAt = &metav1.Time{Time: *run.CompletedAt}
+				t := &metav1.Time{Time: *run.CompletedAt}
+				s.Status.LastScanAt = t
+				s.Status.LastSuccessfulScanAt = t
 			}
 			meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 				Type:               "Ready",
@@ -1096,6 +1098,9 @@ func (r *RepositoryScanReconciler) refreshScanRunStatus(
 			})
 		default:
 			s.Status.Phase = repositoryScanPhaseError
+			if run.CompletedAt != nil {
+				s.Status.LastScanAt = &metav1.Time{Time: *run.CompletedAt}
+			}
 			meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 				Type:               "Ready",
 				Status:             metav1.ConditionFalse,
@@ -1438,6 +1443,7 @@ func (r *RepositoryScanReconciler) ingestCombinedScanTask(ctx context.Context, s
 			s.Status.Phase = repositoryScanPhaseReady
 			s.Status.LastProcessedCommit = run.HeadCommit
 			if task.Status.CompletionTime != nil {
+				s.Status.LastScanAt = task.Status.CompletionTime
 				s.Status.LastSuccessfulScanAt = task.Status.CompletionTime
 			}
 			meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
@@ -1452,6 +1458,9 @@ func (r *RepositoryScanReconciler) ingestCombinedScanTask(ctx context.Context, s
 		}
 
 		s.Status.Phase = repositoryScanPhaseError
+		if task.Status.CompletionTime != nil {
+			s.Status.LastScanAt = task.Status.CompletionTime
+		}
 		meta.SetStatusCondition(&s.Status.Conditions, metav1.Condition{
 			Type:               "Ready",
 			Status:             metav1.ConditionFalse,
